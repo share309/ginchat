@@ -1,4 +1,4 @@
-package ginchat
+package handler
 
 import (
 	"encoding/json"
@@ -10,10 +10,6 @@ import (
 
 /**
 {
-    "cmd": "online"
-}
-
-{
     "cmd":"send",
     "data":{
         "to_user_id": 2,
@@ -22,7 +18,7 @@ import (
 }
 */
 
-var OnlineUser = make(map[int]*websocket.Conn)
+var OnlineUser = make(map[uint]*websocket.Conn)
 
 type WSReq struct {
 	Cmd  string      `json:"cmd"`
@@ -30,13 +26,13 @@ type WSReq struct {
 }
 
 type WSResp struct {
-	Code int         `json:"code"`
+	Code uint        `json:"code"`
 	Msg  string      `json:"msg"`
 	Data interface{} `json:"data"`
 }
 
 type SendS struct {
-	ToUserId int    `json:"to_user_id"`
+	ToUserId uint   `json:"to_user_id"`
 	Message  string `json:"message"`
 }
 
@@ -66,6 +62,9 @@ func Chat(c *gin.Context) {
 
 	defer conn.Close()
 
+	//online user data
+	OnlineUser[userId] = conn
+
 	for {
 		_, message, err := conn.ReadMessage()
 		if err != nil {
@@ -83,8 +82,6 @@ func Chat(c *gin.Context) {
 		}
 
 		switch req.Cmd {
-		case "online":
-			go Online(conn, message, int(userId))
 		case "send":
 			go Send(conn, message)
 		default:
@@ -103,6 +100,16 @@ func Send(conn *websocket.Conn, message []byte) {
 		return
 	}
 
+	if req.Data.ToUserId < 1 {
+		WSRespErr(conn, 20002, "not ToUserId params")
+		return
+	}
+
+	if req.Data.Message == "" {
+		WSRespErr(conn, 20004, "not Message params")
+		return
+	}
+
 	if OnlineUser[req.Data.ToUserId] == nil {
 		WSRespErr(conn, 20003, "not online")
 		return
@@ -114,13 +121,7 @@ func Send(conn *websocket.Conn, message []byte) {
 
 }
 
-func Online(conn *websocket.Conn, message []byte, userId int) {
-
-	OnlineUser[userId] = conn
-	WSRespSuccess(conn, userId)
-}
-
-func WSRespErr(conn *websocket.Conn, code int, msg string) {
+func WSRespErr(conn *websocket.Conn, code uint, msg string) {
 	response := WSResp{
 		Code: code,
 		Msg:  msg,
