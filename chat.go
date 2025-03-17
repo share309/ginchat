@@ -16,6 +16,13 @@ import (
         "message":"hello 2"
     }
 }
+
+{
+    "cmd":"sendGroup",
+    "data":{
+        "message":"all"
+    }
+}
 */
 
 var OnlineUser = make(map[uint]*websocket.Conn)
@@ -41,7 +48,22 @@ type WSSendReq struct {
 	Data SendS  `json:"data"`
 }
 
+type GroupS struct {
+	Message string `json:"message"`
+}
+
+type WSGroupReq struct {
+	Cmd  string `json:"cmd"`
+	Data GroupS `json:"data"`
+}
+
 func Chat(c *gin.Context) {
+
+	//get params test
+	//userIdStr, _ := c.GetQuery("userId")
+	//var userId uint
+	//userIdInt, _ := strconv.Atoi(userIdStr)
+	//userId = uint(userIdInt)
 
 	//get middle userId
 	userId := c.GetUint("userId")
@@ -64,7 +86,7 @@ func Chat(c *gin.Context) {
 
 	//online user data
 	OnlineUser[userId] = conn
-
+	log.Println(OnlineUser)
 	for {
 		_, message, err := conn.ReadMessage()
 		if err != nil {
@@ -84,9 +106,36 @@ func Chat(c *gin.Context) {
 		switch req.Cmd {
 		case "send":
 			go Send(conn, message)
+		case "sendGroup":
+			go SendGroup(conn, message)
 		default:
 			WSRespErr(conn, 10001, "no function")
 		}
+
+	}
+}
+
+func SendGroup(conn *websocket.Conn, message []byte) {
+	var req WSGroupReq
+	err := json.Unmarshal(message, &req)
+	if err != nil {
+		WSRespErr(conn, 20001, "Parsing json failed ")
+		return
+	}
+
+	if req.Data.Message == "" {
+		WSRespErr(conn, 20004, "not Message params")
+		return
+	}
+
+	if len(OnlineUser) == 0 {
+		WSRespErr(conn, 20002, "not Online user")
+		return
+	}
+
+	for _, onlineConn := range OnlineUser {
+
+		WSRespSuccess(onlineConn, req.Data.Message)
 
 	}
 }
