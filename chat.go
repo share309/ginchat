@@ -6,6 +6,7 @@ import (
 	"github.com/gorilla/websocket"
 	"log"
 	"net/http"
+	"time"
 )
 
 /**
@@ -83,6 +84,18 @@ func Chat(c *gin.Context) {
 	}
 
 	defer conn.Close()
+
+	go func() {
+		// 30s
+		for {
+			err := conn.WriteMessage(websocket.PingMessage, []byte{})
+			if err != nil {
+				return
+			}
+
+			time.Sleep(30 * time.Second)
+		}
+	}()
 
 	//online user data
 	OnlineUser[userId] = conn
