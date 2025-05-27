@@ -70,7 +70,11 @@ func Chat(c *gin.Context) {
 	userId := c.GetUint("userId")
 
 	// update websocket
-	var upgrader = websocket.Upgrader{} // use default options
+	var upgrader = websocket.Upgrader{
+		CheckOrigin: func(r *http.Request) bool {
+			return true // 任何来源都允许
+		},
+	} // use default options
 
 	conn, err := upgrader.Upgrade(c.Writer, c.Request, nil)
 	if err != nil {
@@ -200,7 +204,7 @@ func WSRespErr(conn *websocket.Conn, code uint, msg string) {
 
 func WSRespSuccess(conn *websocket.Conn, data interface{}) {
 	response := WSResp{
-		Code: 0,
+		Code: http.StatusOK,
 		Msg:  "ok",
 		Data: data,
 	}
