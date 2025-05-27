@@ -118,9 +118,9 @@ func Chat(c *gin.Context) {
 
 		switch req.Cmd {
 		case "send":
-			go Send(conn, message)
+			go Send(conn, message, userId)
 		case "sendGroup":
-			go SendGroup(conn, message)
+			go SendGroup(conn, message, userId)
 		default:
 			WSRespErr(conn, 10001, "no function")
 		}
@@ -128,7 +128,7 @@ func Chat(c *gin.Context) {
 	}
 }
 
-func SendGroup(conn *websocket.Conn, message []byte) {
+func SendGroup(conn *websocket.Conn, message []byte, userId uint) {
 	var req WSGroupReq
 	err := json.Unmarshal(message, &req)
 	if err != nil {
@@ -153,7 +153,7 @@ func SendGroup(conn *websocket.Conn, message []byte) {
 	}
 }
 
-func Send(conn *websocket.Conn, message []byte) {
+func Send(conn *websocket.Conn, message []byte, userId uint) {
 
 	var req WSSendReq
 	err := json.Unmarshal(message, &req)
